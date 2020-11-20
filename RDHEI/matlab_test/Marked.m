@@ -1,4 +1,6 @@
-function [n_payload] = Marked(EIMG,SD)
+function [n_payload,MIMG] = Marked(EIMG,SD)
+subplot(2,2,1);imshow(EIMG);title("before embedded");
+subplot(2,2,2);imhist(EIMG);title("histogram");
 %parameter 
 alpha = 2;beta = 2;
 %EIMG for encrypted img,SD for secret data
@@ -12,7 +14,7 @@ E = zeros(2,2,n);
 n_row = size(EIMG,1)/s;
 n_col = size(EIMG,2)/s;
 %需考虑IMG长度不是s的整数
-figure;imshow(EIMG);
+%figure;imshow(EIMG);
 k = 1;
 for i=1:n_col
         for j=1:n_row
@@ -64,21 +66,21 @@ for i=1:size(PE_INDEX)
     switch(tmp)
         case 0 %PN 
             A = IMG_BLK(PE_INDEX(i));
-            PN = [PN,bitget(A,7),bitget(A,8)];
-            A = bitset(A,7,0);
-            A = bitset(A,8,0);
+            PN = [PN,bitget(A,1),bitget(A,2)];
+            A = bitset(A,1,0);
+            A = bitset(A,2,0);
         case 1
            A = IMG_BLK(PE_INDEX(i));
-           A = bitset(A,7,0);
-           A = bitset(A,8,1); 
+           A = bitset(A,1,1);
+           A = bitset(A,2,0); 
         case 2
             A = IMG_BLK(PE_INDEX(i));
-            A = bitset(A,7,1);
-            A = bitset(A,8,0);
+            A = bitset(A,1,0);
+            A = bitset(A,2,1);
         case 3
             A = IMG_BLK(PE_INDEX(i));
-            A = bitset(A,7,1);
-            A = bitset(A,8,1);
+            A = bitset(A,1,1);
+            A = bitset(A,2,1);
     end
     IMG_BLK(PE_INDEX(i)) = A;%return    
 end
@@ -91,24 +93,24 @@ n_payload = (8-2)*n_PE-2*n_PN-8;%SD<n_payload
 PN = uint8(PN(2:size(PN,2)));%DELETE THE FIRST ELEMENT
 %PS = uint2bit(PS);
 
-PAYLOAD = [uint2bit(PS),PN,uint2bit(SD)];
-
-
 PE_INDEX = find(PN_FLAG==1|PN_FLAG==2|PN_FLAG==3);
+PAYLOAD = [uint2bit(PS),PN,uint2bit(SD)];n_payload = size(PAYLOAD,2);
+%PAYLOAD = [PAYLOAD,ones(1,(size(PE_INDEX,1)*6-n_payload))];%init
 
 k = 1;
 for i=1:size(PE_INDEX)
+    A = IMG_BLK(PE_INDEX(i));
     %modified PE remain bits(8-alpha)
-    for j = 1:6
+    for j = 3:8
         if(k>size(PAYLOAD,2))
             break
-        end
-        A = IMG_BLK(PE_INDEX(i));
+        end        
         A = bitset(A,j,PAYLOAD(k));
         k = k+1;
     end
     IMG_BLK(PE_INDEX(i)) = A;
 end
+
 
 IMG_BLK = reshape(IMG_BLK,[2,2,n]);
 k = 1;
@@ -119,5 +121,7 @@ for i=1:n_col
         k = k+1;
     end
 end
-figure;imshow(MIMG);
+subplot(2,2,3);imshow(MIMG);title("after embedded");
+subplot(2,2,4);imhist(MIMG);title("histogram");
+%figure;imshow(MIMG);
 end
