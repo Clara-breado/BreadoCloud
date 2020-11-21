@@ -14,18 +14,8 @@ E = zeros(2,2,n);
 n_row = size(EIMG,1)/s;
 n_col = size(EIMG,2)/s;
 %需考虑IMG长度不是s的整数
-%figure;imshow(EIMG);
-k = 1;
-for i=1:n_col
-        for j=1:n_row
-            IMG_BLK(:,:,k)= EIMG(1+(i-1)*s:1+(i-1)*s+(s-1),1+(j-1)*s:1+(j-1)*s+(s-1));
-            IMG_BLK(:,:,k) = IMG_BLK(:,:,k).'; %RASTER SCAN
-            %imshow(uint8(IMG_BLK(:,:,k)));
-            k = k+1;            
-        end
-end
-IMG_BLK = reshape(IMG_BLK,4,n);
-
+[IMG_BLK,n_row,n_col] = Bloking(EIMG,s);
+IMG_BLK = uint8(IMG_BLK);
 %STEP2--grouping
 PR = IMG_BLK(1,:);
 PS = IMG_BLK(2,1);
@@ -95,6 +85,11 @@ PN = uint8(PN(2:size(PN,2)));%DELETE THE FIRST ELEMENT
 
 PE_INDEX = find(PN_FLAG==1|PN_FLAG==2|PN_FLAG==3);
 PAYLOAD = [uint2bit(PS),PN,uint2bit(SD)];n_payload = size(PAYLOAD,2);
+
+nstr_payload = num2str(n_payload);n_nstr = size(nstr_payload,2);% '78951'---5 ;first 8 bit to store this
+nbit_payload = uint2bit(uint8(nstr_payload));
+PAYLOAD = [uint2bit(n_nstr),nbit_payload,PAYLOAD];%add header for PAYLOAD
+
 %PAYLOAD = [PAYLOAD,ones(1,(size(PE_INDEX,1)*6-n_payload))];%init
 
 k = 1;
@@ -110,17 +105,7 @@ for i=1:size(PE_INDEX)
     end
     IMG_BLK(PE_INDEX(i)) = A;
 end
-
-
-IMG_BLK = reshape(IMG_BLK,[2,2,n]);
-k = 1;
-for i=1:n_col
-    for j=1:n_row
-        IMG_BLK(:,:,k) = IMG_BLK(:,:,k)';
-        MIMG(1+(i-1)*s:1+(i-1)*s+(s-1),1+(j-1)*s:1+(j-1)*s+(s-1)) = IMG_BLK(:,:,k);
-        k = k+1;
-    end
-end
+MIMG = UnBloking(IMG_BLK,n_row,n_col);
 subplot(2,2,3);imshow(MIMG);title("after embedded");
 subplot(2,2,4);imhist(MIMG);title("histogram");
 %figure;imshow(MIMG);

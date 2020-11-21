@@ -1,4 +1,4 @@
-SRC = imread('G:\gradethree\RDHEI\src.jpg');
+SRC = imread('G:\gradethree\RDHEI\src_img\src.jpg');
 alpha = 2;beta = 2;
 %须随机取一个通道作为隐藏层--->3通道转1通道
 R = SRC(:,:,1);
