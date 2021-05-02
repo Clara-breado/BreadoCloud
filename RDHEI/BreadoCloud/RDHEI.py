@@ -23,8 +23,8 @@ class RDHEI:
         self.IMG = IMG
         self.SD = SD
         self.K = K
-        self.height = len(IMG[0])
-        self.width = len(IMG[1])
+        self.height = len(IMG)
+        self.width = len(IMG[0])
         self.s = 2
 
 ##接口函数，生成加密图像
@@ -32,12 +32,13 @@ class RDHEI:
         R = self.IMG[:, :, 0]
         G = self.IMG[:, :, 1]
         B = self.IMG[:, :, 2]
-    def single_chanel_Encrypted(self):
+        self.single_chanel_Encrypted(R)
 
+    def single_chanel_Encrypted(self,sIMG):
         self.n = int((self.height*self.width)/(self.s*self.s))
         self.n_row = int(self.height/self.s)
         self.n_col = int(self.width/self.s)
-        IMGBLK = RDHEI.blocking(self)
+        IMGBLK = RDHEI.blocking(self,sIMG)
         #HIMG = imagehash.dhash(IMGBLK)
         #HK = hash()
         #todo 裂开了，没找到对矩阵做哈希的api,能否调用在线的？
@@ -98,13 +99,13 @@ class RDHEI:
         io.imshow(saveIMG)
         plt.show()
         return EIMG
-    def blocking(self):
+    def blocking(self,sIMG):
         k=0
         BLK = np.zeros((self.n,self.s,self.s))
 
-        for i in range(self.n_col):
-            for j in range(self.n_row):
-                BLK[k,:,:] = self.IMG[i*self.s:i*self.s + self.s,
+        for i in range(self.n_row):
+            for j in range(self.n_col):
+                BLK[k,:,:] = sIMG[i*self.s:i*self.s + self.s,
                              j*self.s:j*self.s + self.s]
                 k = k+1
         BLK = BLK.reshape(-1,4) #auto -1
@@ -116,8 +117,8 @@ class RDHEI:
         BLK = BLK.reshape(-1,2,2)
         EIMG = np.zeros((self.height,self.width))
 
-        for i in range(self.n_col):
-            for j in range(self.n_row):
+        for i in range(self.n_row):
+            for j in range(self.n_col):
                 BLK[k,:,:] = BLK[k,:,:].T
                 EIMG[i*self.s:i*self.s+self.s,
                     j*self.s:j*self.s+self.s] = BLK[k,:,:]

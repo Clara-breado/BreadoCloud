@@ -24,4 +24,4 @@ if __name__ == "__main__":
                        [4, 5.4864, 6]])
     b = tool.get_uint8_matrix(Matrix)
     p = RDHEI(IMG=SRC_IMG, SD='breadocloud_embed', K='2018srtp')
-    test = p.single_chanel_Encrypted()
+    test = p.Encrypted()
