@@ -13,8 +13,8 @@ def preprocess(SRC_path):
     B = SRC[:,:,2]
     return SRC
 def datahash(data1,data2):
-    HIMG = get_uint8("5d22edc81b6bf20098efff650e371019")
-    HK = get_uint8("8298c03ef129e6678c7d853cb01b094d")
+    HIMG = get_uint8("83d8696c5441827f6e60b8ed1b0e1262")
+    HK = get_uint8("30c98532a7034f0c908086eec86afccb")
     return list_xor(HIMG,HK)
 
 def get_uint8(str):

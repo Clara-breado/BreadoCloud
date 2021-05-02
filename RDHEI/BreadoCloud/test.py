@@ -6,7 +6,7 @@ import numpy as np
 from skimage import io
 if __name__ == "__main__":
     #process img
-    IMG_PATH = 'G:\gradethree\RDHEI\src_img\src.jpg'
+    IMG_PATH = 'G:\gradethree\RDHEI\src_img\srcc.jpg'
     SRC_IMG = preprocess(IMG_PATH)
 
     SRC = np.array([[2, 7, 4, 2],
