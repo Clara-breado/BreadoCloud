@@ -7,6 +7,8 @@ from skimage import io
 if __name__ == "__main__":
     #process img
     IMG_PATH = 'G:\gradethree\RDHEI\src_img\srcc.jpg'
+    EIMG_PATH = 'G:\python\BreadoCloud\encrypted.png'
+    KEY_PATH = 'G:\python\BreadoCloud\qrkey.png'
     SRC_IMG = preprocess(IMG_PATH)
 
     SRC = np.array([[2, 7, 4, 2],
@@ -25,3 +27,4 @@ if __name__ == "__main__":
     b = tool.get_uint8_matrix(Matrix)
     p = RDHEI(IMG=SRC_IMG, SD='breadocloud_embed', K='2018srtp')
     test = p.Encrypted()
+    o = p.Recovery(EIMG_PATH,KEY_PATH)

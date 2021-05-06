@@ -21,6 +21,10 @@ class RDHEI:
     n_row = None
     n_col = None
     R_channel = None
+    R_EIMG = None
+    K_R = None
+    K_G = None
+    K_B = None
 
     def __init__(self,IMG,SD,K):
         self.IMG = IMG
@@ -36,23 +40,51 @@ class RDHEI:
         self.R_channel = R
         G = self.IMG[:, :, 1]
         B = self.IMG[:, :, 2]
-        RIMG = self.single_channel_Encrypted(R)
-        GIMG = self.single_channel_Encrypted(G)
-        BING = self.single_channel_Encrypted(B)
+        [RIMG,self.K_R] = self.single_channel_Encrypted(R)
+        [GIMG,self.K_G] = self.single_channel_Encrypted(G)
+        [BING,self.K_B] = self.single_channel_Encrypted(B)
 
-        ORIMG = self.single_channel_Recovery(RIMG,self.Ke)
-        OGIMG = self.single_channel_Recovery(GIMG,self.Ke)
-        OBING = self.single_channel_Recovery(BING,self.Ke)
+        self.R_EIMG = RIMG
 
+        saveIMG = np.zeros((self.height, self.width, 3))
+        saveIMG[:, :, 0] = RIMG
+        saveIMG[:, :, 1] = GIMG
+        saveIMG[:, :, 2] = BING
+        saveIMG = saveIMG.astype('uint8')
+        tool.get_qrKEY(self.K_R+self.K_G+self.K_B)
+        io.imsave('encrypted.png', saveIMG)
+        #io.imsave('qrKEY.png',qrKEY)
+        io.imshow(saveIMG)
+        plt.show()
+        return  saveIMG
+
+##接口函数，生成解密图像
+    def Recovery(self,EIMG_PATH,KEY_PATH):
+        EIMG = io.imread(EIMG_PATH)
+        [K_R,K_G,K_B] = tool.read_qrKEY(KEY_PATH)
+        RIMG = EIMG[:,:,0]
+        GIMG = EIMG[:,:,1]
+        BIMG = EIMG[:,:,2]
+        ORIMG = self.single_channel_Recovery(RIMG,K_R)
+        OGIMG = self.single_channel_Recovery(GIMG,K_G)
+        OBING = self.single_channel_Recovery(BIMG,K_B)
         saveIMG = np.zeros((self.height, self.width, 3))
         saveIMG[:, :, 0] = ORIMG
         saveIMG[:, :, 1] = OGIMG
         saveIMG[:, :, 2] = OBING
         saveIMG = saveIMG.astype('uint8')
-        io.imsave('test2.jpg', saveIMG)
+        io.imsave('Recovery.png', saveIMG)
         io.imshow(saveIMG)
         plt.show()
 
+    def Embedded(self,sData):
+        pass
+    def Extracted(self,Ke):
+        pass
+    def single_channel_Embedded(self,sData):
+        pass
+    def single_channel_Extracted(self,Ke):
+        pass
     def single_channel_Encrypted(self,sIMG):
         self.n = int((self.height*self.width)/(self.s*self.s))
         self.n_row = int(self.height/self.s)
@@ -123,7 +155,7 @@ class RDHEI:
         io.imsave('test.jpg',saveIMG)
         #io.imshow(saveIMG)
         #plt.show()
-        return EIMG
+        return EIMG,Ke
 
     def single_channel_Recovery(self,sIMG,inputK):
         s_IMG = RDHEI.blocking(self,sIMG)
