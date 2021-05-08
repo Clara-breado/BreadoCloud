@@ -37,14 +37,13 @@ class RDHEI:
 ##接口函数，生成加密图像
     def Encrypted(self):
         R = self.IMG[:, :, 0]
-        self.R_channel = R
         G = self.IMG[:, :, 1]
         B = self.IMG[:, :, 2]
         [RIMG,self.K_R] = self.single_channel_Encrypted(R)
         [GIMG,self.K_G] = self.single_channel_Encrypted(G)
         [BING,self.K_B] = self.single_channel_Encrypted(B)
 
-        self.R_EIMG = RIMG
+        #self.R_EIMG = RIMG
 
         saveIMG = np.zeros((self.height, self.width, 3))
         saveIMG[:, :, 0] = RIMG
@@ -52,7 +51,7 @@ class RDHEI:
         saveIMG[:, :, 2] = BING
         saveIMG = saveIMG.astype('uint8')
         tool.get_qrKEY(self.K_R+self.K_G+self.K_B)
-        io.imsave('encrypted.png', saveIMG)
+        io.imsave('encrypted.png', saveIMG)#todo path_name.png
         #io.imsave('qrKEY.png',qrKEY)
         io.imshow(saveIMG)
         plt.show()
@@ -77,13 +76,187 @@ class RDHEI:
         io.imshow(saveIMG)
         plt.show()
 
-    def Embedded(self,sData):
+##接口函数，隐藏信息
+    def Embedded(self,EIMG_PATH,sData):
+        EIMG = io.imread(EIMG_PATH)
+        RIMG = EIMG[:,:,0]
+        GIMG = EIMG[:,:,1]
+        BIMG = EIMG[:,:,2]
+        [R_D,G_D,B_D] = tool.dataSplit(sData)
+        EmRIMG = self.single_channel_Embedded(RIMG,R_D)
+        EmGIMG = self.single_channel_Embedded(GIMG,G_D)
+        EmBIMG = self.single_channel_Embedded(BIMG,B_D)
+
+        saveIMG = np.zeros((self.height, self.width, 3))
+        saveIMG[:, :, 0] = EmRIMG
+        saveIMG[:, :, 1] = EmGIMG
+        saveIMG[:, :, 2] = EmBIMG
+        saveIMG = saveIMG.astype('uint8')
+        io.imsave('EMBED.png', saveIMG)
+        io.imshow(saveIMG)
+        plt.show()
         pass
-    def Extracted(self,Ke):
+##接口函数，提取信息
+    def Extracted(self,EmIMG_PATH,Ke):
+        EmIMG = io.imread(EmIMG_PATH)
+        RIMG = EmIMG[:, :, 0]
+        GIMG = EmIMG[:, :, 1]
+        BIMG = EmIMG[:, :, 2]
+        dataR = self.single_channel_Extracted(RIMG,Ke)
+        dataG = self.single_channel_Extracted(GIMG,Ke)
+        dataB = self.single_channel_Extracted(BIMG,Ke)
+
+        return dataR+dataG+dataB
         pass
-    def single_channel_Embedded(self,sData):
-        pass
-    def single_channel_Extracted(self,Ke):
+    def single_channel_Embedded(self,EIMG,sData):
+        sData = tool.get_uint8(sData)
+        E_IMG = RDHEI.blocking(self,EIMG)
+        E_IMG = E_IMG.astype('uint8')
+        PR = E_IMG[0,:]
+        PR = PR.reshape(1,-1)
+        PS = E_IMG[1,0]
+        p_err = 1
+        PN_FLAG = np.zeros((self.s*self.s,self.n))
+        PN_FLAG[0,:] = -1 #PR
+        PN_FLAG[1,0] = -1 #PS
+
+        for i in range(self.n):
+            for j in range(1,4):
+                e = 0
+                a = PR[0,i]
+                b = E_IMG[j,i]
+                # if(a>=b):e= a-b
+                # else: e=b-a
+                e = -1*b+a
+                if(abs(e)>p_err):
+                    PN_FLAG[j,i] = 0
+                elif e == -1:
+                    PN_FLAG[j,i] = 1
+                elif e == 0:
+                    PN_FLAG[j,i] = 2
+                elif e == 1:
+                    PN_FLAG[j,i] = 3
+        #STEP 3 PBTL
+        PE_INDEX = np.argwhere(PN_FLAG != -1)
+        #PN = np.zeros((1,1))
+        PN = ""
+        for i in range(len(PE_INDEX)-1):
+            tmp_idx = PE_INDEX[i]
+            tmp = PN_FLAG[tmp_idx[0],tmp_idx[1]]
+            A = E_IMG[tmp_idx[0],tmp_idx[1]]
+            if tmp == 0:
+                A_bit = tool.uint2bit_num(A)
+                PN += A_bit[len(A_bit)-2:len(A_bit)] #last two bits of A
+                #PN += A_bit[0:2]
+                A = tool.bits_modi(A,'00')
+            elif tmp==1:
+                A = tool.bits_modi(A,'10')
+            elif tmp==2:
+                A = tool.bits_modi(A,'01')
+            elif tmp==3:
+                A = tool.bits_modi(A,'11')
+            E_IMG[tmp_idx[0],tmp_idx[1]] = A
+        # STEP 4 PAYLOAD EMBED
+        #ifb = PN.rfind('b')
+        n_PN =np.argwhere(PN_FLAG==0).size
+        n_PE = np.argwhere(PN_FLAG>0).size
+        n_PAYLOAD = (8-2)*n_PE-2*n_PN-8
+
+        PE_INDEX = np.argwhere(PN_FLAG>0)
+        bit_data = tool.uint2bit(sData)
+        PAYLOAD = tool.uint2bit_num(PS)+tool.uint2bit(sData) #+PN+
+        n_PAYLOAD = len(PAYLOAD)
+        nstr_PAYLOAD = str(n_PAYLOAD)
+        n_nstr = len(nstr_PAYLOAD)
+        nbit_PAYLOAD = tool.uint2bit(tool.get_uint8(nstr_PAYLOAD))
+        PAYLOAD_HEAD = tool.uint2bit_num(n_nstr)+nbit_PAYLOAD
+        PAYLOAD = PAYLOAD_HEAD+PAYLOAD
+
+        k = 0
+        for i in range(len(PE_INDEX)):
+            tmp_idx = PE_INDEX[i]
+            tmp = PN_FLAG[tmp_idx[0], tmp_idx[1]]
+            A = E_IMG[tmp_idx[0], tmp_idx[1]]
+            for j in range(0,6):
+                if(k>len(PAYLOAD)-1):break
+                A_bit = tool.bit_modi(A,j,PAYLOAD[k])
+                A = int(A_bit,2)
+                k = k+1
+            E_IMG[tmp_idx[0], tmp_idx[1]] = A
+        EMIMG = self.unblocking_two(E_IMG)
+        return EMIMG
+    def single_channel_Extracted(self,EmIMG,Ke):
+        Em_IMG = self.blocking(EmIMG)
+        Em_IMG = Em_IMG.astype("uint8")
+        #GROUPING
+        PR = Em_IMG[0,:]
+        PS = Em_IMG[1,0]
+        PN_FLAG = np.zeros((self.s * self.s, self.n))
+        PN_FLAG[0, :] = -1  # PR
+        PN_FLAG[1, 0] = -1  # PS
+        BIAS = np.zeros((self.s * self.s, self.n))
+        for i in range(self.n):
+            for j in range(1,4):
+                A = Em_IMG[j,i]
+                R_bit = tool.uint2bit_num(A)
+                #R_bit = R_bit[len(R_bit)-2:len(R_bit)] #FLAG BITS--LAST TWO BIT
+                R_bit = R_bit[6:8]
+                R_bit = int(R_bit,2)
+                if(R_bit == 0):
+                    PN_FLAG[j,i] = 0
+                elif(R_bit == 2):
+                    PN_FLAG[j,i] = 1
+                    BIAS[j,i] = -1
+                elif(R_bit == 1):
+                    PN_FLAG[j,i] = 2
+                    BIAS[j,i] = 0
+                elif(R_bit == 3):
+                    PN_FLAG[j,i] = 3
+                    BIAS[j,i] = 1
+        #extract from PE
+        PE_INDEX = np.argwhere(PN_FLAG>0)
+        ED_bit = "" #embedded data
+        for i in range(len(PE_INDEX)):
+            tmp_idx = PE_INDEX[i]
+            tmp = PN_FLAG[tmp_idx[0], tmp_idx[1]]
+            A = Em_IMG[tmp_idx[0], tmp_idx[1]]
+            #for j in range(0,6):
+            A_bit = tool.uint2bit_num(A)
+            ED_bit += A_bit[0:6]
+
+        #get length of Embedding data
+        n_nstr = int(ED_bit[0:8],2)
+        char_PAYLOAD = ""
+        for i in range(1,n_nstr+1):
+            char_PAYLOAD += str(int(ED_bit[8*i:8*(i+1)],2)-48) #ASCII change to num to str
+        n_PAYLOAD = int(char_PAYLOAD)
+        #CUT THE HEAD and CUT THE REST(unembedded)
+        ED_bit = ED_bit[(n_nstr+1)*8:(n_nstr+1)*8+n_PAYLOAD]
+        edlen = len(ED_bit)
+        #recover PS PN
+        PN_INDEX = np.argwhere(PN_FLAG==0)
+        # n_pn = len(PN_INDEX)
+        # k = 0
+        # for i in range(n_pn):
+        #     tmp_idx = PN_INDEX[i]
+        #     tmp = PN_FLAG[tmp_idx[0], tmp_idx[1]]
+        #     A = Em_IMG[tmp_idx[0], tmp_idx[1]]
+        #     A = int(tool.bit_modi(A,0,ED_bit[k]),2)
+        #     A = int(tool.bit_modi(A,1, ED_bit[k+1]),2)
+        #     k = k+2
+        #     Em_IMG[tmp_idx[0], tmp_idx[1]] = A
+        #recover ED
+        ED_bit = ED_bit[8:len(ED_bit)-1]
+        ED = ""
+        for i in range(int(len(ED_bit)/8)):
+            ED += chr(int(ED_bit[i*8:(i+1)*8],2))
+        for i in range(len(PE_INDEX)):
+            tmp_idx = PE_INDEX[i]
+            tmp = PN_FLAG[tmp_idx[0], tmp_idx[1]]
+            R_PX = PR[tmp_idx[1]]
+            Em_IMG[tmp_idx[0], tmp_idx[1]] = R_PX+BIAS[tmp_idx[0], tmp_idx[1]]
+        #EmIMG = self.unblocking(Em_IMG)
+        return ED
         pass
     def single_channel_Encrypted(self,sIMG):
         self.n = int((self.height*self.width)/(self.s*self.s))
@@ -211,6 +384,15 @@ class RDHEI:
         # plt.show()
         return OIMG
 
+    def preprocess(self,IMG_PATH):
+        IMG = io.imread(IMG_PATH)
+        self.height = len(IMG)
+        self.width = len(IMG[0])
+        self.n = int((self.height * self.width) / (self.s * self.s))
+        self.n_row = int(self.height / self.s)
+        self.n_col = int(self.width / self.s)
+        return IMG
+
     def blocking(self,sIMG):
         k=0
         BLK = np.zeros((self.n,self.s,self.s))
@@ -232,6 +414,19 @@ class RDHEI:
         for i in range(self.n_row):
             for j in range(self.n_col):
                 BLK[k,:,:] = BLK[k,:,:].T
+                EIMG[i*self.s:i*self.s+self.s,
+                    j*self.s:j*self.s+self.s] = BLK[k,:,:]
+                k = k+1
+        return EIMG
+
+    def unblocking_two(self,BLK):
+        k = 0
+        BLK = BLK.T.reshape(-1,2,2)
+        EIMG = np.zeros((self.height,self.width))
+
+        for i in range(self.n_row):
+            for j in range(self.n_col):
+                #BLK[k,:,:] = BLK[k,:,:].T
                 EIMG[i*self.s:i*self.s+self.s,
                     j*self.s:j*self.s+self.s] = BLK[k,:,:]
                 k = k+1

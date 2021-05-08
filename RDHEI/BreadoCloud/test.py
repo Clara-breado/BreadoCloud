@@ -6,8 +6,9 @@ import numpy as np
 from skimage import io
 if __name__ == "__main__":
     #process img
-    IMG_PATH = 'G:\gradethree\RDHEI\src_img\srcc.jpg'
+    IMG_PATH = 'G:\gradethree\RDHEI\src_img\src.jpg'
     EIMG_PATH = 'G:\python\BreadoCloud\encrypted.png'
+    EMIMG_PATH = 'G:\python\BreadoCloud\EMBED.png'
     KEY_PATH = 'G:\python\BreadoCloud\qrkey.png'
     SRC_IMG = preprocess(IMG_PATH)
 
@@ -25,6 +26,9 @@ if __name__ == "__main__":
                        [3, 2, 1],
                        [4, 5.4864, 6]])
     b = tool.get_uint8_matrix(Matrix)
-    p = RDHEI(IMG=SRC_IMG, SD='breadocloud_embed', K='2018srtp')
-    test = p.Encrypted()
-    o = p.Recovery(EIMG_PATH,KEY_PATH)
+    p = RDHEI(IMG=SRC_IMG, SD='breadocloud_embed', K='2018srtp')#todo path/NAME/
+    test = p.Encrypted() #todo PATH+QRKEY_NAME input：K,SRC_IMG,KEY_IMG 只有加密后的存路径 其他存图片
+    o = p.Recovery(EIMG_PATH,KEY_PATH) #todo input:KEY_IMG output:OIMG
+    EM = p.Embedded(EIMG_PATH,'breadocloudembed') #todo input:SD output:EMIMG_PATH,QRKEY2_PATH-------EXTRACTED input:QRKEY2_PATH,EMIMG_PATH OUTPUT:SD
+    sd = p.Extracted(EMIMG_PATH,'000')
+    print(sd)

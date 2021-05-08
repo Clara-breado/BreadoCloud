@@ -73,3 +73,40 @@ def read_qrKEY(qr_path):
     K_B = Kelist[64:128]
     #K_R,K_G,K_B type = list
     return [K_R,K_G,K_B]
+
+def dataSplit(data):
+    l = len(data)
+    R_D = data[0:int(l/3)]
+    G_D = data[int(l/3):int(l/3)*2]
+    B_D = data[int(l/3)*2:l+1]
+    return [R_D,G_D,B_D]
+
+def bits_modi(DEC,rep_bits):
+    bin_num = bin(DEC)
+    zero_str = '0'*(10-len(bin_num))
+    bin_num = zero_str+bin_num[2:len(bin_num)]
+    bin_num = bin_num[0:6]+rep_bits
+    #bin_num = rep_bits+bin_num[2:8]
+    newDEC = int(bin_num,2)
+    return newDEC
+
+def bit_modi(DEC,idx,rep):
+    new_bin = uint2bit_num(DEC)
+    new_bin = new_bin[0:idx]+ rep +new_bin[1+idx:len(new_bin)]
+    return new_bin
+
+def uint2bit_num(uint):
+    bin_num = bin(uint)
+    zero_str = '0' * (10 - len(bin_num))
+    bin_num = zero_str + bin_num[2:len(bin_num)]
+    str_bit = bin_num
+    return str_bit
+
+def uint2bit(UINT):
+    str_bit = ""
+    for u in UINT:
+        bin_num = bin(u)
+        zero_str = '0' * (10 - len(bin_num))
+        bin_num = zero_str + bin_num[2:len(bin_num)]
+        str_bit += bin_num
+    return str_bit
