@@ -11,6 +11,7 @@ from scipy import misc
 class RDHEI:
     IMG = None
     IMG_PATH = None
+    IMG_NAME = None
     SD = None
     K = None
     Ke = None
@@ -26,40 +27,39 @@ class RDHEI:
     K_G = None
     K_B = None
 
-    def __init__(self,IMG,SD,K):
-        self.IMG = IMG
-        self.SD = SD
-        self.K = K
-        self.height = len(IMG)
-        self.width = len(IMG[0])
+    def __init__(self,IMG_PATH):
+        self.IMG_PATH = IMG_PATH
         self.s = 2
 
 ##接口函数，生成加密图像
-    def Encrypted(self):
-        R = self.IMG[:, :, 0]
-        G = self.IMG[:, :, 1]
-        B = self.IMG[:, :, 2]
-        [RIMG,self.K_R] = self.single_channel_Encrypted(R)
-        [GIMG,self.K_G] = self.single_channel_Encrypted(G)
-        [BING,self.K_B] = self.single_channel_Encrypted(B)
-
-        #self.R_EIMG = RIMG
+    def Encrypted(self,FILE_NAME,k):
+        self.IMG_NAME = FILE_NAME.split('.',-1)[0]
+        IMG = self.preprocess(self.IMG_PATH+FILE_NAME)
+        R = IMG[:, :, 0]
+        G = IMG[:, :, 1]
+        B = IMG[:, :, 2]
+        [RIMG,self.K_R] = self.single_channel_Encrypted(R,k)
+        [GIMG,self.K_G] = self.single_channel_Encrypted(G,k)
+        [BING,self.K_B] = self.single_channel_Encrypted(B,k)
 
         saveIMG = np.zeros((self.height, self.width, 3))
         saveIMG[:, :, 0] = RIMG
         saveIMG[:, :, 1] = GIMG
         saveIMG[:, :, 2] = BING
         saveIMG = saveIMG.astype('uint8')
-        tool.get_qrKEY(self.K_R+self.K_G+self.K_B)
-        io.imsave('encrypted.png', saveIMG)#todo path_name.png
-        #io.imsave('qrKEY.png',qrKEY)
+        savePath = self.IMG_PATH + self.IMG_NAME
+        tool.get_qrKEY(self.K_R+self.K_G+self.K_B,savePath)
+        savePath += '_en.png'   # encrypted
+        io.imsave(savePath, saveIMG)
         io.imshow(saveIMG)
         plt.show()
-        return  saveIMG
+        return savePath
 
 ##接口函数，生成解密图像
-    def Recovery(self,EIMG_PATH,KEY_PATH):
-        EIMG = io.imread(EIMG_PATH)
+    def Recovery(self,FILE_NAME,KEY_PATH):
+        #EIMG = io.imread(EIMG_PATH)
+        self.IMG_NAME = FILE_NAME.split('.', -1)[0]
+        EIMG = self.preprocess(self.IMG_PATH + FILE_NAME)
         [K_R,K_G,K_B] = tool.read_qrKEY(KEY_PATH)
         RIMG = EIMG[:,:,0]
         GIMG = EIMG[:,:,1]
@@ -72,13 +72,18 @@ class RDHEI:
         saveIMG[:, :, 1] = OGIMG
         saveIMG[:, :, 2] = OBING
         saveIMG = saveIMG.astype('uint8')
-        io.imsave('Recovery.png', saveIMG)
+        savePath = self.IMG_PATH + self.IMG_NAME+'_re.png'  # Recovery IMG
+
+        io.imsave(savePath, saveIMG)
         io.imshow(saveIMG)
         plt.show()
+        return savePath
 
 ##接口函数，隐藏信息
-    def Embedded(self,EIMG_PATH,sData):
-        EIMG = io.imread(EIMG_PATH)
+    def Embedded(self,FILE_NAME,sData):
+        # IMG = io.imread(EIMG_PATH)
+        self.IMG_NAME = FILE_NAME.split('.', -1)[0]
+        EIMG = self.preprocess(self.IMG_PATH + FILE_NAME)
         RIMG = EIMG[:,:,0]
         GIMG = EIMG[:,:,1]
         BIMG = EIMG[:,:,2]
@@ -92,13 +97,16 @@ class RDHEI:
         saveIMG[:, :, 1] = EmGIMG
         saveIMG[:, :, 2] = EmBIMG
         saveIMG = saveIMG.astype('uint8')
-        io.imsave('EMBED.png', saveIMG)
+        savePath = self.IMG_PATH + self.IMG_NAME+'_em.png'  # Recovery IMG
+        io.imsave(savePath, saveIMG)
         io.imshow(saveIMG)
         plt.show()
-        pass
+        return savePath
 ##接口函数，提取信息
-    def Extracted(self,EmIMG_PATH,Ke):
-        EmIMG = io.imread(EmIMG_PATH)
+    def Extracted(self,FILE_NAME,Ke):
+        #EmIMG = io.imread(EmIMG_PATH)
+        self.IMG_NAME = FILE_NAME.split('.', -1)[0]
+        EmIMG = self.preprocess(self.IMG_PATH + FILE_NAME)
         RIMG = EmIMG[:, :, 0]
         GIMG = EmIMG[:, :, 1]
         BIMG = EmIMG[:, :, 2]
@@ -106,8 +114,9 @@ class RDHEI:
         dataG = self.single_channel_Extracted(GIMG,Ke)
         dataB = self.single_channel_Extracted(BIMG,Ke)
 
-        return dataR+dataG+dataB
-        pass
+        data = str(dataR)+str(dataG)+str(dataB)
+        return data
+
     def single_channel_Embedded(self,EIMG,sData):
         sData = tool.get_uint8(sData)
         E_IMG = RDHEI.blocking(self,EIMG)
@@ -258,15 +267,15 @@ class RDHEI:
         #EmIMG = self.unblocking(Em_IMG)
         return ED
         pass
-    def single_channel_Encrypted(self,sIMG):
-        self.n = int((self.height*self.width)/(self.s*self.s))
-        self.n_row = int(self.height/self.s)
-        self.n_col = int(self.width/self.s)
+    def single_channel_Encrypted(self,sIMG,K):
+        # self.n = int((self.height*self.width)/(self.s*self.s))
+        # self.n_row = int(self.height/self.s)
+        # self.n_col = int(self.width/self.s)
         IMGBLK = RDHEI.blocking(self,sIMG)
         #HIMG = imagehash.dhash(IMGBLK)
         #HK = hash()
         #todo 裂开了，没找到对矩阵做哈希的api,能否调用在线的？
-        Ke = tool.datahash(IMGBLK,self.K)
+        Ke = tool.datahash(IMGBLK,K)
         self.Ke = Ke
         Ke256 = np.zeros((1,256))
         # Ke256[0:8] = tool.get_bit(Ke[0])

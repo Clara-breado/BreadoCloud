@@ -55,11 +55,12 @@ def get_bit(dec):
         dec = int(dec/2)
     return bits
 
-def get_qrKEY(str_key):
+def get_qrKEY(str_key,KEY_PATH):
     qr = qrcode.QRCode()
     qr.add_data(str_key)
     qrKEY = qr.make_image(fill_color='blue', back_color='pink')
-    qrKEY.save("qrKEY.png")
+    KEY_PATH += '_qrKEY'
+    qrKEY.save(KEY_PATH+'.png')
 
 def read_qrKEY(qr_path):
     qrIMG = Image.open(qr_path)
