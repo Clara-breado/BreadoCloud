@@ -255,9 +255,10 @@ class RDHEI:
         #     k = k+2
         #     Em_IMG[tmp_idx[0], tmp_idx[1]] = A
         #recover ED
-        ED_bit = ED_bit[8:len(ED_bit)-1]
+        ED_bit = ED_bit[8:len(ED_bit)]
         ED = ""
-        for i in range(int(len(ED_bit)/8)):
+        chr_len = int(len(ED_bit)/8)
+        for i in range(chr_len):
             ED += chr(int(ED_bit[i*8:(i+1)*8],2))
         for i in range(len(PE_INDEX)):
             tmp_idx = PE_INDEX[i]
